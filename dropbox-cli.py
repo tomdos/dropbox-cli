@@ -7,9 +7,12 @@ import sys
 ACCESS_TOKEN="usGsZYtABmAAAAAAAAAAEKoa46Wm0f6FmcMsRChQlZ5EVlF88rMvva0KwsouAUXP"
 
 class DropBox:
-    def __init__(self, access_token):
+    def __init__(self, access_token = None):
         self._access_token = access_token
+        self._client = None
 
+    def setAccessToken(self, access_token):
+        self._access_token = access_token
 
     def authorize(self, app_key, app_secret):
         flow = dropbox.client.DropboxOAuth2FlowNoRedirect(app_key, app_secret)
@@ -33,22 +36,32 @@ class DropBox:
 
 
 
-def printPretty(data):
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(data)
-
-
-def printDir(folder_metadata):
-    pass
-
-
-
-class DropBoxShell:
+class DropBoxShell(DropBox):
     def __init__(self):
         self._cwd = "/"
         self._shellLoop = True
 
-    def commandParser(self, command):
+        # DropBox
+        #self._dropbox = DropBox()
+        #self.
+        DropBox().__init__(self)
+
+
+    def _cmdHelp(self):
+        print "help\tshow this help information"
+        print "ls\t..."
+        print "cd\t..."
+
+
+    def _cmdLs(self, command):
+        pass
+
+
+    def _cmdCd(self, command):
+        pass
+
+
+    def _commandParser(self, command):
         if command == None:
             return
 
@@ -59,7 +72,7 @@ class DropBoxShell:
         command = commandFull.split()[0]
 
         if command == "help":
-            print 'help'
+            self._cmdHelp()
         elif command == "ls":
             print 'ls'
         elif command == "get":
@@ -79,7 +92,17 @@ class DropBoxShell:
         while self._shellLoop:
             sys.stdout.write("dropbox:" + self._cwd + "> ")
             command = sys.stdin.readline()
-            self.commandParser(command)
+            self._commandParser(command)
+
+
+
+def printPretty(data):
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(data)
+
+
+def printDir(folder_metadata):
+    pass
 
 #access_token, user_id = authorize()
 #print access_token + " " + user_id
@@ -92,12 +115,10 @@ class DropBoxShell:
 #printPretty(folder_metadata)
 
 
-
-
-
-
 if __name__ == "__main__":
     #dbox = DropBox(ACCESS_TOKEN)
     #client = dbox.connect()
     dbs = DropBoxShell()
+    dbs.setAccessToken(ACCESS_TOKEN)
+    dbs.connect()
     dbs.shell()
