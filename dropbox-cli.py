@@ -42,8 +42,44 @@ def printDir(folder_metadata):
     pass
 
 
-def processCommand(command):
-    switch comma
+
+class DropBoxShell:
+    def __init__(self):
+        self._cwd = "/"
+        self._shellLoop = True
+
+    def commandParser(self, command):
+        if command == None:
+            return
+
+        commandFull = command.strip()
+        if commandFull == "":
+            return
+
+        command = commandFull.split()[0]
+
+        if command == "help":
+            print 'help'
+        elif command == "ls":
+            print 'ls'
+        elif command == "get":
+            print 'get'
+        elif command == "put":
+            print 'put'
+        elif command == "cd":
+            print 'cd'
+        elif command == "exit":
+            print 'exit'
+            self._shellLoop = False
+        else:
+            print 'command not found'
+
+
+    def shell(self):
+        while self._shellLoop:
+            sys.stdout.write("dropbox:" + self._cwd + "> ")
+            command = sys.stdin.readline()
+            self.commandParser(command)
 
 #access_token, user_id = authorize()
 #print access_token + " " + user_id
@@ -56,14 +92,12 @@ def processCommand(command):
 #printPretty(folder_metadata)
 
 
-def shell():
-    while True:
-        sys.stdout.write("dropbox> ")
-        command = sys.stdin.readline()
-        processCommand(command)
+
+
 
 
 if __name__ == "__main__":
     #dbox = DropBox(ACCESS_TOKEN)
     #client = dbox.connect()
-    shell()
+    dbs = DropBoxShell()
+    dbs.shell()
