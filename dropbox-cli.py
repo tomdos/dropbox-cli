@@ -34,6 +34,9 @@ class DropBox:
         client = dropbox.client.DropboxClient(self._access_token)
         return client
 
+    def metadata(self, path):
+        return self._client.metadata(path)
+
 
 
 class DropBoxShell(DropBox):
@@ -46,6 +49,10 @@ class DropBoxShell(DropBox):
         #self.
         DropBox().__init__(self)
 
+    def _dbgPrintPretty(data):
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(data)
+
 
     def _cmdHelp(self):
         print "help\tshow this help information"
@@ -54,7 +61,8 @@ class DropBoxShell(DropBox):
 
 
     def _cmdLs(self, command):
-        pass
+        metadata = self._metadata(self._cwd)
+        self._dbgPrintPretty(metadata)
 
 
     def _cmdCd(self, command):
@@ -93,12 +101,6 @@ class DropBoxShell(DropBox):
             sys.stdout.write("dropbox:" + self._cwd + "> ")
             command = sys.stdin.readline()
             self._commandParser(command)
-
-
-
-def printPretty(data):
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(data)
 
 
 def printDir(folder_metadata):
