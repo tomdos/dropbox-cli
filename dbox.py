@@ -34,10 +34,18 @@ class DropBox:
     def connect(self):
         self._client = dropbox.client.DropboxClient(self._access_token)
 
+
     def _metadata(self, path):
         try:
             return self._client.metadata(path)
         except dropbox.rest.ErrorResponse:
+            raise
+            
+            
+    def _createFolder(self, path):
+        try:
+            return self._client.file_create_folder(path)
+        except:
             raise
             
 
@@ -107,7 +115,7 @@ class DropBoxShell(DropBox):
                 
             # go back - test for root dir
             if directory == '..':
-                newPath = re.sub(r'/[^/]*/$','', newPath)
+                newPath = re.sub(r'/[^/]*/$','/', newPath)
                 if not newPath:
                     newPath = '/'
                     
@@ -131,6 +139,13 @@ class DropBoxShell(DropBox):
         except:
             print 'cd: ' + path + ': No such file or directory'
 
+    def _cmdMkdir(self, path):
+        path = self._parsePath(path)
+        try:
+            metadata = self._createFolder(path)
+        except:
+            print 'Can\'t create folder: ' + path
+            
 
     def _commandParser(self, command):
         if command == None:
@@ -159,6 +174,11 @@ class DropBoxShell(DropBox):
         elif command == "exit":
             print 'exit'
             self._shellLoop = False
+        elif command == "mkdir":
+            if len(commandFull) > 1:
+                self._cmdMkdir(commandFull[1])
+            else:
+                print "mkdir: missing operand"
         else:
             print 'command not found'
 
@@ -188,11 +208,6 @@ if __name__ == "__main__":
     #dbox = DropBox(ACCESS_TOKEN)
     #client = dbox.connect()
     dbs = DropBoxShell()
-    #dbs.setAccessToken(ACCESS_TOKEN)
-    #dbs.connect()
-    #dbs.shell()
-    
-    print(dbs._parsePath('/a/b/../b'))
-    #print(dbs._parsePath('/a/b/c//'))
-    #print(dbs._parsePath('../a/b/../'))
-    #print(dbs._parsePath('/./.././a/../b/../c/.'))
+    dbs.setAccessToken(ACCESS_TOKEN)
+    dbs.connect()
+    dbs.shell()
