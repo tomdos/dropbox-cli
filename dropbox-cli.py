@@ -3,6 +3,7 @@
 import dropbox
 import pprint
 import sys
+import re
 
 ACCESS_TOKEN="usGsZYtABmAAAAAAAAAAEKoa46Wm0f6FmcMsRChQlZ5EVlF88rMvva0KwsouAUXP"
 
@@ -34,7 +35,11 @@ class DropBox:
         self._client = dropbox.client.DropboxClient(self._access_token)
 
     def _metadata(self, path):
-        return self._client.metadata(path)
+        try:
+            return self._client.metadata(path)
+        except dropbox.rest.ErrorResponse:
+            raise
+            
 
 
 
@@ -76,20 +81,66 @@ class DropBoxShell(DropBox):
             name = item['path'].split('/')[-1]
             print("{} {}\t{}\t{}".format(type, size, date, name))
 
+    def _parsePath(self, path):
+        """ Path parser - should work same as in linux shell """
+        # /dir
+        # dir
+        # ..
+        # ../dir
+        # /./
+        # /dirA/../dirB 
+        
+        # relative path - add curret cwd
+        if path[0] != '/':
+            path = self._cwd + '/' + path
+            
+        pathSplit = path.split('/')
+        newPath = '/'
+        for directory in pathSplit:
+            # empty item means multiple slashes '///'
+            if not directory:
+                continue
+                
+            # current direcctory
+            if directory == '.':
+                continue
+                
+            # go back - test for root dir
+            if directory == '..':
+                newPath = re.sub(r'/[^/]*/$','', newPath)
+                if not newPath:
+                    newPath = '/'
+                    
+                continue
 
-    def _cmdCd(self, command):
-        pass
+            # directories
+            newPath = newPath + directory + '/'
+        
+        # if last character is shash remove it
+        if len(newPath) > 1 and newPath[-1] == '/':
+            newPath = newPath[:-1]
+        
+        return newPath
+        
+
+    def _cmdCd(self, path = '/'):
+        path = self._parsePath(path)
+        try:
+            metadata = self._metadata(path)
+            self._cwd = path
+        except:
+            print 'cd: ' + path + ': No such file or directory'
 
 
     def _commandParser(self, command):
         if command == None:
             return
 
-        commandFull = command.strip()
-        if commandFull == "":
+        commandFull = command.strip().split()
+        if commandFull == False:
             return
 
-        command = commandFull.split()[0]
+        command = commandFull[0]
 
         if command == "help":
             self._cmdHelp()
@@ -100,7 +151,11 @@ class DropBoxShell(DropBox):
         elif command == "put":
             print 'put'
         elif command == "cd":
-            print 'cd'
+            if len(commandFull) > 1:
+                self._cmdCd(commandFull[1])
+            else:
+                self._cmdCd()
+            
         elif command == "exit":
             print 'exit'
             self._shellLoop = False
@@ -133,6 +188,11 @@ if __name__ == "__main__":
     #dbox = DropBox(ACCESS_TOKEN)
     #client = dbox.connect()
     dbs = DropBoxShell()
-    dbs.setAccessToken(ACCESS_TOKEN)
-    dbs.connect()
-    dbs.shell()
+    #dbs.setAccessToken(ACCESS_TOKEN)
+    #dbs.connect()
+    #dbs.shell()
+    
+    print(dbs._parsePath('/a/b/../b'))
+    #print(dbs._parsePath('/a/b/c//'))
+    #print(dbs._parsePath('../a/b/../'))
+    #print(dbs._parsePath('/./.././a/../b/../c/.'))
