@@ -31,10 +31,9 @@ class DropBox:
 
 
     def connect(self):
-        client = dropbox.client.DropboxClient(self._access_token)
-        return client
+        self._client = dropbox.client.DropboxClient(self._access_token)
 
-    def metadata(self, path):
+    def _metadata(self, path):
         return self._client.metadata(path)
 
 
@@ -49,7 +48,7 @@ class DropBoxShell(DropBox):
         #self.
         DropBox().__init__(self)
 
-    def _dbgPrintPretty(data):
+    def _dbgPrintPretty(self, data):
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(data)
 
@@ -60,9 +59,22 @@ class DropBoxShell(DropBox):
         print "cd\t..."
 
 
-    def _cmdLs(self, command):
-        metadata = self._metadata(self._cwd)
-        self._dbgPrintPretty(metadata)
+    def _cmdLs(self, path = None):
+        if path == None:
+            path = self._cwd
+            
+        metadata = self._metadata(path)
+        #self._dbgPrintPretty(metadata)
+        for item in metadata['contents']:
+            if item['is_dir']:
+                type = "d"
+            else:
+                type = "f"
+                
+            size = item['size']
+            date = item['modified']
+            name = item['path'].split('/')[-1]
+            print("{} {}\t{}\t{}".format(type, size, date, name))
 
 
     def _cmdCd(self, command):
@@ -82,7 +94,7 @@ class DropBoxShell(DropBox):
         if command == "help":
             self._cmdHelp()
         elif command == "ls":
-            print 'ls'
+            self._cmdLs()
         elif command == "get":
             print 'get'
         elif command == "put":
