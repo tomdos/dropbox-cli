@@ -133,7 +133,7 @@ class DropBoxShell(cmd.Cmd):
 
         return newPath
         
-    def _generic_path_complete(self, text, line, begidx, endidx):
+    def _generic_remote_path_complete(self, text, line, begidx, endidx):
         """ Path completion - on DropBox site """
         dirname = os.path.dirname(text)
         if not dirname:
@@ -149,12 +149,38 @@ class DropBoxShell(cmd.Cmd):
 
         dirname = self._parse_path(dirname)
         completions = self.drop.metadata(dirname)
-        completions = [name['path'] for name in completions['contents'] if name['is_dir'] and re.search(pattern, name['path'])]
+        completions = [name['path'] for name in completions['contents'] 
+            if name['is_dir'] and re.search(pattern, name['path'])]
         #print completions
         
         # if last path add slash at the end
         if len(completions) == 1:
             completions = [completions[0] + os.sep]
+
+        return completions
+
+
+    def _generic_local_path_complete(self, text, line, begidx, endidx):
+        """ Path completion - local file system. """
+        dirname = os.path.dirname(text)
+        if not dirname:
+            dirname = self.cwd
+
+        prefix = os.path.basename(text)
+        if not prefix:
+            prefix = '.'
+
+        pattern = "".join(["^", prefix, ".*"])
+        completions = [name+os.sep for name in os.listdir(dirname) 
+            if os.path.isdir(os.path.join(dirname,name)) and re.search(pattern, name)]
+
+        try:
+            #if len(completions) == 1:
+            if text:
+                dirname = os.path.dirname(text)
+                completions = [os.path.join(dirname,name) for name in completions]
+        except:
+            print sys.exc_info()
 
         return completions
             
@@ -220,23 +246,41 @@ class DropBoxShell(cmd.Cmd):
         words = line.split()
         for file in words:
             self.drop.delete(file)
-            
 
+
+    def do_put(self, line):
+        print "execute: put ", line
+            
+            
+    def complete_put(self, text, line, begidx, endidx):
+        """ 
+        Completion of put command. Put will upload a file to server therefor
+        two kind of paths are used. The first path is local file and the second 
+        is DB.
+        """
+        words = line.split()
+        if len(words) <= 2:
+            return self._generic_local_path_complete(text, line, begidx, endidx)
+        elif len(words) > 2:
+            return self._generic_remote_path_complete(text, line, begidx, endidx)
+        
+        return None
+    
     def complete_mkdir(self, text, line, begidx, endidx):
         """ Completion of mkdir command. """
-        return self._generic_path_complete(text, line, begidx, endidx)
+        return self._generic_remote_path_complete(text, line, begidx, endidx)
 
     def complete_ls(self, text, line, begidx, endidx):
         """ Completion of ls command. """
-        return self._generic_path_complete(text, line, begidx, endidx)
+        return self._generic_remote_path_complete(text, line, begidx, endidx)
 
     def complete_cd(self, text, line, begidx, endidx):
         """ Completion of cd command. """
-        return self._generic_path_complete(text, line, begidx, endidx)
+        return self._generic_remote_path_complete(text, line, begidx, endidx)
         
     def complete_rmrf(self, text, line, begidx, endidx):
         """ Completion of rmrf command. """
-        return self._generic_path_complete(text, line, begidx, endidx)
+        return self._generic_remote_path_complete(text, line, begidx, endidx)
 
 
 
