@@ -55,148 +55,19 @@ class DropBoxHelper:
         """ Create folder DB side. """
         try:
             self._client.file_create_folder(path)
-        except dropboxrest.ErrorResponse:
+        except dropbox.rest.ErrorResponse:
             raise
-
-
-# class DropBoxShell_(DropBox):
-#     def __init__(self):
-#         self._cwd = "/"
-#         self._shellLoop = True
-#
-#         # DropBox
-#         #self._dropbox = DropBox()
-#         #self.
-#         DropBox().__init__(self)
-#
-#     def _dbgPrintPretty(self, data):
-#         pp = pprint.PrettyPrinter(indent=4)
-#         pp.pprint(data)
-#
-#
-#     def _cmdHelp(self):
-#         print "help\tshow this help information"
-#         print "ls\t..."
-#         print "cd\t..."
-#
-#
-#     def _cmdLs(self, path = None):
-#         if path == None:
-#             path = self._cwd
-#
-#         metadata = self._metadata(path)
-#         #self._dbgPrintPretty(metadata)
-#         for item in metadata['contents']:
-#             if item['is_dir']:
-#                 type = "d"
-#             else:
-#                 type = "f"
-#
-#             size = item['size']
-#             date = item['modified']
-#             name = item['path'].split('/')[-1]
-#             print("{} {}\t{}\t{}".format(type, size, date, name))
-#
-#     def _parsePath(self, path):
-#         """ Path parser - should work same as in linux shell """
-#         # /dir
-#         # dir
-#         # ..
-#         # ../dir
-#         # /./
-#         # /dirA/../dirB
-#
-#         # relative path - add curret cwd
-#         if path[0] != '/':
-#             path = self._cwd + '/' + path
-#
-#         pathSplit = path.split('/')
-#         newPath = '/'
-#         for directory in pathSplit:
-#             # empty item means multiple slashes '///'
-#             if not directory:
-#                 continue
-#
-#             # current direcctory
-#             if directory == '.':
-#                 continue
-#
-#             # go back - test for root dir
-#             if directory == '..':
-#                 newPath = re.sub(r'/[^/]*/$','/', newPath)
-#                 if not newPath:
-#                     newPath = '/'
-#
-#                 continue
-#
-#             # directories
-#             newPath = newPath + directory + '/'
-#
-#         # if last character is shash remove it
-#         if len(newPath) > 1 and newPath[-1] == '/':
-#             newPath = newPath[:-1]
-#
-#         return newPath
-#
-#
-#     def _cmdCd(self, path = '/'):
-#         path = self._parsePath(path)
-#         try:
-#             metadata = self._metadata(path)
-#             self._cwd = path
-#         except:
-#             print 'cd: ' + path + ': No such file or directory'
-#
-#     def _cmdMkdir(self, path):
-#         path = self._parsePath(path)
-#         try:
-#             metadata = self._createFolder(path)
-#         except:
-#             print 'Can\'t create folder: ' + path
-#
-#
-#     def _commandParser(self, command):
-#         if command == None:
-#             return
-#
-#         commandFull = command.strip().split()
-#         if commandFull == False:
-#             return
-#
-#         command = commandFull[0]
-#
-#         if command == "help":
-#             self._cmdHelp()
-#         elif command == "ls":
-#             self._cmdLs()
-#         elif command == "get":
-#             print 'get'
-#         elif command == "put":
-#             print 'put'
-#         elif command == "cd":
-#             if len(commandFull) > 1:
-#                 self._cmdCd(commandFull[1])
-#             else:
-#                 self._cmdCd()
-#
-#         elif command == "exit":
-#             print 'exit'
-#             self._shellLoop = False
-#         elif command == "mkdir":
-#             if len(commandFull) > 1:
-#                 self._cmdMkdir(commandFull[1])
-#             else:
-#                 print "mkdir: missing operand"
-#         else:
-#             print 'command not found'
-#
-#
-#     def shell(self):
-#         while self._shellLoop:
-#             sys.stdout.write("dropbox:" + self._cwd + "> ")
-#             command = sys.stdin.readline()
-#             self._commandParser(command)
-#
+            
+    def delete(self, path):
+        """ 
+        Delete destination of path no mather whether it is file, empty directory 
+        or directory with content.
+        """
+        try:
+            self._client.file_delete(path)
+        except dropbox.rest.ErrorRersponse:
+            raise
+            
 
 class DropBoxShell(cmd.Cmd):
     def __init__(self):
@@ -291,7 +162,8 @@ class DropBoxShell(cmd.Cmd):
     def do_mkdir(self, line):
         """ Create directory - similar behaviour as mkdir on linux. """
         if not line:
-            print "missing path"
+            print "missing operand"
+            return
 
         # FIXME - folder with white space        
         words = line.split()            
@@ -335,6 +207,20 @@ class DropBoxShell(cmd.Cmd):
             name = item['path'].split('/')[-1]
             print("{} {}\t{}\t{}".format(type, size, date, name))
             
+            
+    def do_rmrf(self, line):
+        """ 
+        Remove file or directory - be aware that behaviour is similar to linux
+        command rm -rf. 
+        """
+        if not line:
+            print "missing operand"
+            return
+            
+        words = line.split()
+        for file in words:
+            self.drop.delete(file)
+            
 
     def complete_mkdir(self, text, line, begidx, endidx):
         """ Completion of mkdir command. """
@@ -346,6 +232,10 @@ class DropBoxShell(cmd.Cmd):
 
     def complete_cd(self, text, line, begidx, endidx):
         """ Completion of cd command. """
+        return self._generic_path_complete(text, line, begidx, endidx)
+        
+    def complete_rmrf(self, text, line, begidx, endidx):
+        """ Completion of rmrf command. """
         return self._generic_path_complete(text, line, begidx, endidx)
 
 
