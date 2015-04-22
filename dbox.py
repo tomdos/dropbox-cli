@@ -12,6 +12,7 @@ import cmd
 ACCESS_TOKEN="usGsZYtABmAAAAAAAAAAEKoa46Wm0f6FmcMsRChQlZ5EVlF88rMvva0KwsouAUXP"
 
 class DropBoxHelper:
+    """ Wrapper of DropBox's official module. """
     def __init__(self, access_token = None):
         self._access_token = access_token
         self._client = None
@@ -39,20 +40,23 @@ class DropBoxHelper:
         self._client = dropbox.client.DropboxClient(self._access_token)
 
 
-    def _metadata(self, path):
+    def metadata(self, path):
+        """ 
+        Return path's metadata. It means everything about file/directory and
+        its content.
+        """
         try:
             return self._client.metadata(path)
         except dropbox.rest.ErrorResponse:
             raise
 
-
-    def _createFolder(self, path):
+            
+    def create_folder(self, path):
+        """ Create folder DB side. """
         try:
-            return self._client.file_create_folder(path)
-        except:
+            self._client.file_create_folder(path)
+        except dropboxrest.ErrorResponse:
             raise
-
-
 
 
 # class DropBoxShell_(DropBox):
@@ -214,7 +218,11 @@ class DropBoxShell(cmd.Cmd):
 
 
     def _parse_path(self, path):
-        """ Path parser - should work same as in linux shell """
+        """ 
+        Path parser will clean up path. Returned value is the shortest path 
+        without additional slash(/), single dots(.) and doule dots(..).
+        """
+        # What to check:
         # /dir
         # dir
         # ..
@@ -255,6 +263,7 @@ class DropBoxShell(cmd.Cmd):
         return newPath
         
     def _generic_path_complete(self, text, line, begidx, endidx):
+        """ Path completion - on DropBox site """
         dirname = os.path.dirname(text)
         if not dirname:
             dirname = self.cwd
@@ -268,7 +277,7 @@ class DropBoxShell(cmd.Cmd):
         #print "*",dirname," ",prefix," ", filter_path, "*"
 
         dirname = self._parse_path(dirname)
-        completions = self.drop._metadata(dirname)
+        completions = self.drop.metadata(dirname)
         completions = [name['path'] for name in completions['contents'] if name['is_dir'] and re.search(pattern, name['path'])]
         #print completions
         
@@ -278,32 +287,42 @@ class DropBoxShell(cmd.Cmd):
 
         return completions
             
-            
+    
     def do_mkdir(self, line):
-        pass
+        """ Create directory - similar behaviour as mkdir on linux. """
+        if not line:
+            print "missing path"
+
+        # FIXME - folder with white space        
+        words = line.split()            
+        for dir in words:
+            self.drop.create_folder(dir)
                 
 
     def do_pwd(self, line):
+        """ Print current workind directory. """
         print self.cwd
 
 
     def do_cd(self, line):
+        """ Change directory """
         path = self._parse_path(line)
 
         try:
-            metadata = self.drop._metadata(path)
+            metadata = self.drop.metadata(path)
             self.cwd = path
         except:
             print 'cd: ' + path + ': No such file or directory'
 
 
     def do_ls(self, line):
+        """ List directory - if line parameter is missing list current direcotry. """
         if not line:
             path = self.cwd
         else:
             path = self._parse_path(line)
 
-        metadata = self.drop._metadata(path)
+        metadata = self.drop.metadata(path)
         #self._dbgPrintPretty(metadata)
         for item in metadata['contents']:
             if item['is_dir']:
@@ -318,12 +337,15 @@ class DropBoxShell(cmd.Cmd):
             
 
     def complete_mkdir(self, text, line, begidx, endidx):
+        """ Completion of mkdir command. """
         return self._generic_path_complete(text, line, begidx, endidx)
 
     def complete_ls(self, text, line, begidx, endidx):
+        """ Completion of ls command. """
         return self._generic_path_complete(text, line, begidx, endidx)
 
     def complete_cd(self, text, line, begidx, endidx):
+        """ Completion of cd command. """
         return self._generic_path_complete(text, line, begidx, endidx)
 
 
