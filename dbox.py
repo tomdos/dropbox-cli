@@ -16,6 +16,8 @@ class DropBoxHelper:
     def __init__(self, access_token = None):
         self._access_token = access_token
         self._client = None
+        self._delta = None
+        self._entries = None
 
     def setAccessToken(self, access_token):
         self._access_token = access_token
@@ -38,6 +40,22 @@ class DropBoxHelper:
 
     def connect(self):
         self._client = dropbox.client.DropboxClient(self._access_token)
+        
+    
+    def delta(self):
+        if self._delta:
+            cursor = self._delta['cursor']
+        else:
+            cursor = None
+            
+        self._delta = self._client.delta(cursor)
+        
+        
+    def get_entries(self):        
+        if self._delta == None:
+            self.delta()
+            
+        return self._delta['entries']
 
 
     def metadata(self, path):
@@ -250,7 +268,45 @@ class DropBoxShell(cmd.Cmd):
 
     def do_put(self, line):
         print "execute: put ", line
+
+    ############################
+    def do_delta(self, line):
+        print "execute: delta ", line
+        
+        
+    def complete_delta(self, text, line, begidx, endidx):
+        """ TESTING delta """
+        entries = self.drop.get_entries()
+        
+        
+        dirname = os.path.dirname(text)
+        if not dirname:
+            dirname = self.cwd
+
+        prefix = os.path.basename(text)
+        if not prefix:
+            prefix = '.'
+
+        filter_path = self._parse_path(dirname+"/"+prefix)
+        #filter_path = filter_path.lower()
+        pattern = "".join(["^", filter_path, "[^/].*"])
+        #print "*",dirname," ",prefix," ", filter_path, "*"
+        
+        #completions = [name['path'] for name in completions['contents'] 
+        #    if name['is_dir'] and re.search(pattern, name['path'])]
+        #print pattern
+        
+        completions = [ e[1]['path'] for e in entries if e[1]['is_dir']
+            and re.search(pattern, e[1]['path']) ]
             
+        if len(completions) == 1:
+            completions = [completions[0] + os.sep]
+        
+        return completions
+        
+
+
+    #############################        
             
     def complete_put(self, text, line, begidx, endidx):
         """ 
@@ -265,25 +321,46 @@ class DropBoxShell(cmd.Cmd):
             return self._generic_remote_path_complete(text, line, begidx, endidx)
         
         return None
-    
+        
+            
     def complete_mkdir(self, text, line, begidx, endidx):
         """ Completion of mkdir command. """
         return self._generic_remote_path_complete(text, line, begidx, endidx)
+
 
     def complete_ls(self, text, line, begidx, endidx):
         """ Completion of ls command. """
         return self._generic_remote_path_complete(text, line, begidx, endidx)
 
+
     def complete_cd(self, text, line, begidx, endidx):
         """ Completion of cd command. """
         return self._generic_remote_path_complete(text, line, begidx, endidx)
+
         
     def complete_rmrf(self, text, line, begidx, endidx):
         """ Completion of rmrf command. """
         return self._generic_remote_path_complete(text, line, begidx, endidx)
 
 
+def mydelta():
+    """ Test of delta function - obtain meta information about files and folders. """
+    import pprint
+    pp = pprint.PrettyPrinter(indent=4)
+    
+    drop = dropbox.client.DropboxClient(ACCESS_TOKEN)
+    d = drop.delta()
+    #pp.pprint(d)
+    entries = d['entries']
+    pp.pprint(entries[0][1]['path'])
+    
+    for e in entries:
+        pp.pprint(e[0])
+    
+
+
 
 if __name__ == "__main__":
     dbs = DropBoxShell()
     dbs.cmdloop()
+    #mydelta()
