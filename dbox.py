@@ -55,7 +55,7 @@ class DropBoxHelper:
 
 
 
-# class DropBoxShell(DropBox):
+# class DropBoxShell_(DropBox):
 #     def __init__(self):
 #         self._cwd = "/"
 #         self._shellLoop = True
@@ -207,7 +207,9 @@ class DropBoxShell(cmd.Cmd):
             readline.parse_and_bind("bind '\t' rl_complete")
         else:
             readline.parse_and_bind('tab: complete')
-
+        
+        readline.set_completer_delims(' \t\n;')
+        
         cmd.Cmd.__init__(self)
 
 
@@ -251,6 +253,35 @@ class DropBoxShell(cmd.Cmd):
             newPath = newPath[:-1]
 
         return newPath
+        
+    def _generic_path_complete(self, text, line, begidx, endidx):
+        dirname = os.path.dirname(text)
+        if not dirname:
+            dirname = self.cwd
+
+        prefix = os.path.basename(text)
+        if not prefix:
+            prefix = '.'
+
+        filter_path = self._parse_path(dirname+"/"+prefix)
+        pattern = "".join(["^", filter_path, ".*"])
+        #print "*",dirname," ",prefix," ", filter_path, "*"
+
+        dirname = self._parse_path(dirname)
+        completions = self.drop._metadata(dirname)
+        completions = [name['path'] for name in completions['contents'] if name['is_dir'] and re.search(pattern, name['path'])]
+        #print completions
+        
+        # if last path add slash at the end
+        if len(completions) == 1:
+            completions = [completions[0] + os.sep]
+
+        return completions
+            
+            
+    def do_mkdir(self, line):
+        pass
+                
 
     def do_pwd(self, line):
         print self.cwd
@@ -284,38 +315,16 @@ class DropBoxShell(cmd.Cmd):
             date = item['modified']
             name = item['path'].split('/')[-1]
             print("{} {}\t{}\t{}".format(type, size, date, name))
+            
 
+    def complete_mkdir(self, text, line, begidx, endidx):
+        return self._generic_path_complete(text, line, begidx, endidx)
+
+    def complete_ls(self, text, line, begidx, endidx):
+        return self._generic_path_complete(text, line, begidx, endidx)
 
     def complete_cd(self, text, line, begidx, endidx):
-        dirname = os.path.dirname(text)
-        if not dirname:
-            dirname = self.cwd
-
-        prefix = os.path.basename(text)
-        if not prefix:
-            prefix = '.'
-
-
-
-        filter_path = self._parse_path(dirname+"/"+prefix)
-        pattern = "".join(["^", filter_path, ".*"])
-        print "*",dirname," ",prefix," ", filter_path, "*"
-
-        #completions = [name+os.sep for name in os.listdir(dirname) if os.path.isdir(os.path.join(dirname,name)) and re.search(pattern, name)]
-        dirname = self._parse_path(dirname)
-        completions = self.drop._metadata(dirname)
-        completions = [name['path'] for name in completions['contents'] if name['is_dir']]
-        #print completions
-
-        try:
-            #if len(completions) == 1:
-            if text:
-                dirname = os.path.dirname(text)
-                #completions = [os.path.join(dirname,name) for name in completions]
-        except:
-            print sys.exc_info()
-
-        return completions
+        return self._generic_path_complete(text, line, begidx, endidx)
 
 
 
