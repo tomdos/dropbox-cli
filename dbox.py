@@ -3,6 +3,7 @@
 import dropbox
 import pprint
 import sys
+import os
 import re
 import readline
 import rlcompleter
@@ -254,6 +255,7 @@ class DropBoxShell(cmd.Cmd):
     def do_pwd(self, line):
         print self.cwd
 
+
     def do_cd(self, line):
         path = self._parse_path(line)
 
@@ -263,11 +265,12 @@ class DropBoxShell(cmd.Cmd):
         except:
             print 'cd: ' + path + ': No such file or directory'
 
+
     def do_ls(self, line):
         if not line:
             path = self.cwd
         else:
-            path = line
+            path = self._parse_path(line)
 
         metadata = self.drop._metadata(path)
         #self._dbgPrintPretty(metadata)
@@ -282,8 +285,37 @@ class DropBoxShell(cmd.Cmd):
             name = item['path'].split('/')[-1]
             print("{} {}\t{}\t{}".format(type, size, date, name))
 
+
     def complete_cd(self, text, line, begidx, endidx):
-        pass
+        dirname = os.path.dirname(text)
+        if not dirname:
+            dirname = self.cwd
+
+        prefix = os.path.basename(text)
+        if not prefix:
+            prefix = '.'
+
+
+
+        filter_path = self._parse_path(dirname+"/"+prefix)
+        pattern = "".join(["^", filter_path, ".*"])
+        print "*",dirname," ",prefix," ", filter_path, "*"
+
+        #completions = [name+os.sep for name in os.listdir(dirname) if os.path.isdir(os.path.join(dirname,name)) and re.search(pattern, name)]
+        dirname = self._parse_path(dirname)
+        completions = self.drop._metadata(dirname)
+        completions = [name['path'] for name in completions['contents'] if name['is_dir']]
+        #print completions
+
+        try:
+            #if len(completions) == 1:
+            if text:
+                dirname = os.path.dirname(text)
+                #completions = [os.path.join(dirname,name) for name in completions]
+        except:
+            print sys.exc_info()
+
+        return completions
 
 
 
